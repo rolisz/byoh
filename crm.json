@@ -1,0 +1,16 @@
+{
+ "_note": "A fake CRM (think HubSpot, Pipedrive, or Google Contacts with labels). People only, as a real CRM would have.",
+ "contacts": [
+  {"email": "ioana.petrescu@orbis-retail.example", "name": "Ioana Petrescu", "company": "Orbis Retail", "role": "CEO", "relationship": "client", "priority": "high"},
+  {"email": "mihai.sandu@orbis-retail.example", "name": "Mihai Sandu", "company": "Orbis Retail", "role": "Data lead", "relationship": "client", "priority": "high"},
+  {"email": "ana.marin@brightline-logistics.example", "name": "Ana Marin", "company": "Brightline Logistics", "role": "Head of Operations", "relationship": "client", "priority": "high"},
+  {"email": "andrei.marinescu@brightlane-foods.example", "name": "Andrei Marinescu", "company": "Brightlane Foods", "role": "CTO", "relationship": "client", "priority": "high"},
+  {"email": "office@contabil-popa.example", "name": "Contabilitate Popa", "company": "Contabilitate Popa SRL", "role": "Accountant", "relationship": "vendor", "priority": "high"},
+  {"email": "maria.moldovan@famil.example", "name": "Maria Moldovan", "company": "", "role": "Wife", "relationship": "family", "priority": "high"},
+  {"email": "tudor@moldovan-ai.example", "name": "Tudor Barbu", "company": "Moldovan AI", "role": "Engineer", "relationship": "colleague", "priority": "normal"},
+  {"email": "victor.neagu@ardealsoft.example", "name": "Victor Neagu", "company": "ArdealSoft", "role": "Engineering manager", "relationship": "lead", "priority": "normal"},
+  {"email": "elena@clujai-meetup.example", "name": "Elena Rusu", "company": "Cluj AI Meetup", "role": "Organiser", "relationship": "community", "priority": "normal"},
+  {"email": "cfp@pydata-buc.example", "name": "PyData Bucharest", "company": "PyData Bucharest", "role": "Programme committee", "relationship": "community", "priority": "normal"},
+  {"email": "radu.ilie@mailbox.example", "name": "Radu Ilie", "company": "", "role": "Friend", "relationship": "personal", "priority": "normal"}
+ ]
+}
