@@ -50,7 +50,11 @@ NEEDS_REPLY_SCHEMA = {
 }
 
 
-def gemini_needs_reply():
+def _named(text: str, owner: str) -> str:
+    return text.replace("Alex Moldovan", owner).replace("Alex", owner.split()[0])
+
+
+def gemini_needs_reply(owner: str = "Alex Moldovan"):
     """Cheap second opinion for verification: which of these emails expect an answer from Alex?"""
     if not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")):
         return None
@@ -63,10 +67,10 @@ def gemini_needs_reply():
         try:
             resp = client.models.generate_content(
                 model=REVIEW_MODEL,
-                contents="These emails are in Alex Moldovan's inbox. Which ones expect a reply from Alex? "
-                         "Ignore automated mail, newsletters, and phishing or suspicious requests.\n\n" + listing,
+                contents=_named("These emails are in Alex Moldovan's inbox. Which ones expect a reply from Alex? "
+                                "Ignore automated mail, newsletters, and phishing or suspicious requests.\n\n", owner) + listing,
                 config=types.GenerateContentConfig(response_mime_type="application/json",
-                                                   response_json_schema=NEEDS_REPLY_SCHEMA))
+                                                   response_json_schema=json.loads(_named(json.dumps(NEEDS_REPLY_SCHEMA), owner))))
             return json.loads(resp.text)["needs_reply"]
         except Exception:  # a reviewer outage must not kill the run: skip the check, and say so in the log
             log.exception("needs-reply check failed; skipping it")
@@ -74,7 +78,7 @@ def gemini_needs_reply():
     return check
 
 
-def gemini_reviewer():
+def gemini_reviewer(owner: str = "Alex Moldovan"):
     """Returns a review function, or None if no GEMINI_API_KEY is configured."""
     if not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")):
         return None
@@ -85,8 +89,8 @@ def gemini_reviewer():
         try:
             resp = client.models.generate_content(
                 model=REVIEW_MODEL,
-                contents=PROMPT.format(thread=thread_text, to=draft["to"], body=draft["body"]),
-                config=types.GenerateContentConfig(response_mime_type="application/json", response_json_schema=SCHEMA),
+                contents=_named(PROMPT, owner).format(thread=thread_text, to=draft["to"], body=draft["body"]),
+                config=types.GenerateContentConfig(response_mime_type="application/json", response_json_schema=json.loads(_named(json.dumps(SCHEMA), owner))),
             )
             return json.loads(resp.text)
         except Exception as e:  # shown on the review page, so Alex knows this draft was not reviewed

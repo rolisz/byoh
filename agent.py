@@ -33,11 +33,12 @@ def system_prompt(box: Mailbox, step: int) -> str:
     base = f"You are {box.owner['name']}'s email assistant ({box.owner['email']}). Now: {box.today}."
     if step == 0:
         return base
-    return base + (                                                          # step 1: Alex's rules
-        "\nEvery sender comes with what Alex's CRM knows about them. Never archive email from high-priority "
-        "contacts: label it so Alex sees it.\n"
-        "Never make commitments for Alex (dates, prices, accepting work, personal plans) in a reply: "
-        "leave a [placeholder] for Alex to fill in.")
+    who = box.owner["name"].split()[0]
+    return base + (                                                          # step 1: the owner's rules
+        f"\nEvery sender comes with what {who}'s CRM knows about them. Never archive email from high-priority "
+        f"contacts: label it so {who} sees it.\n"
+        f"Never make commitments for {who} (dates, prices, accepting work, personal plans) in a reply: "
+        f"leave a [placeholder] for {who} to fill in.")
 
 
 def main():
@@ -59,7 +60,7 @@ def main():
     extra = {"cache_control": {"type": "ephemeral"}} if step >= 1 else {}   # step 1: context
     policy = Policy(box, crm, human) if step >= 2 else None                 # step 2: control
     report: dict = {}
-    check = verify(mail, set(), gemini_reviewer(), report, gemini_needs_reply()) if step >= 3 else None  # step 3
+    check = verify(mail, set(), gemini_reviewer(box.owner['name']), report, gemini_needs_reply(box.owner['name'])) if step >= 3 else None  # step 3
 
     trace, t0 = open(box.dir / "trace.jsonl", "a"), time.time()  # measurement only: the audit log
     messages = [{"role": "user", "content": TASKS.get(a.task, a.task)}]
@@ -107,7 +108,7 @@ def main():
     print(summary)
     if step >= 3:
         if not report:  # verify never ran: review what's there
-            verify(mail, set(), gemini_reviewer(), report)()
+            verify(mail, set(), gemini_reviewer(box.owner['name']), report)()
         print(f"\nreview page: {write_review_page(box, mail, report, summary)}")
     (box.dir / "transcript.json").write_text(json.dumps(
         [m if isinstance(m["content"], str) else {"role": m["role"], "content": [

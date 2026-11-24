@@ -31,6 +31,35 @@ Options:
 
 `step00_loop.py` is the bare loop on its own, about 30 lines. It is the version shown on the slides.
 
+## In the loop: the TUI, on a real mailbox
+
+`tui.py` runs the same loop in a terminal UI, with you in it:
+- You type the request, and you see every tool call as it happens.
+- You can type while it works; the agent reads your message after its current step.
+- It asks you in a dialog before bulk archives (step 2+) and before sending any email. On a real mailbox, send approval is always on, at every step.
+- Its drafts are listed on the right, with the reviewer's flags. Open one to edit, send or discard it.
+- Esc stops it after the current step.
+
+```bash
+uv run tui.py                       # the fake inbox
+uv run tui.py --imap --dry-run      # your mailbox, read for real, nothing written
+uv run tui.py --imap                # your mailbox, for real
+```
+
+`--imap` reads the `IMAP_*` / `SMTP_*` settings from `.env` and loads the newest `--limit` emails in INBOX (default 100). Loading uses `BODY.PEEK`, so nothing is marked as read. On the server:
+
+| Action | What happens |
+|---|---|
+| labels | IMAP keywords; if the server doesn't support them, labels last for the session only |
+| archive | moves the email to the `\Archive` folder |
+| trash | moves it to Trash |
+| drafts | saved in Drafts, one per thread |
+| send | goes out over SMTP, with a copy saved in Sent |
+
+With `--dry-run`, every write goes to `runs/<name>/writes.jsonl` instead.
+
+For the CRM, put your own contacts in `my_crm.json` (same shape as `crm.json`; it's gitignored). Without it, no one counts as high priority.
+
 ## The steps
 
 | Step | Box | What the loop gains |
@@ -77,6 +106,8 @@ uv run score.py runs/<name> [runs/<name> ...]
 | File | What it is |
 |---|---|
 | `agent.py` | the loop, with `--step 0..3` |
+| `tui.py` | the same loop in a terminal UI, with you in it |
+| `imapmail.py` | a real mailbox over IMAP/SMTP, behind the same API as the fake one |
 | `checks.py` | the harness: context functions, the policy, the checks, the human |
 | `connector.py` | the Gmail connector's 11 tools, over the fake mailbox |
 | `reviewer.py` | the Gemini reviewer |

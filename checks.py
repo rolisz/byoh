@@ -16,13 +16,16 @@ from tools import MailTools, _addr, clean_body
 # ---------------------------------------------------------------- the human
 
 class Human:
-    """Who the harness asks. `interactive` prompts in the terminal; `auto` is a scripted stand-in for experiments."""
+    """Who the harness asks. `interactive` prompts in the terminal; `auto` is a scripted stand-in for experiments;
+    `asker` hands the question to a UI (the TUI) and blocks until the person answers."""
 
-    def __init__(self, run_dir: Path, mode: str = "auto"):
-        self.mode, self.log = mode, run_dir / "asks.jsonl"
+    def __init__(self, run_dir: Path, mode: str = "auto", asker=None):
+        self.mode, self.log, self.asker = mode, run_dir / "asks.jsonl", asker
 
     def ask(self, kind: str, question: str, details: str = "") -> str:
-        if self.mode == "interactive":
+        if self.asker:
+            answer = self.asker(kind, question, details)
+        elif self.mode == "interactive":
             print(f"\n=== {kind} ===\n{question}\n{details}")
             answer = input("> ").strip() or "no"
         else:
@@ -77,6 +80,7 @@ class Policy:
 
     def __init__(self, box, crm: dict[str, dict], human: Human, bulk: int = 15):
         self.box, self.crm, self.human, self.bulk = box, crm, human, bulk
+        self.who = box.owner["name"].split()[0]
 
     @staticmethod
     def deny(reason: str) -> dict:
@@ -87,14 +91,16 @@ class Policy:
             ids = [i for i in args.get("message_ids", []) if i in self.box.msgs]
             key = [i for i in ids if self.crm.get(_addr(self.box.msgs[i]["from"]), {}).get("priority") == "high"]
             if key:
-                return self.deny(f"{key} are from high-priority contacts in Alex's CRM and stay in the inbox. "
+                return self.deny(f"{key} are from high-priority contacts in {self.who}'s CRM and stay in the inbox. "
                                  f"Label them instead, and archive the others without them.")
             if len(ids) > self.bulk:
                 senders = sorted({_addr(self.box.msgs[i]["from"]) for i in ids})
                 preview = "\n".join(f"- {self.box.msgs[i]['from']}: {self.box.msgs[i]['subject'][:70]}" for i in ids)
                 answer = self.human.ask("bulk_archive", f"Archive {len(ids)} emails from {len(senders)} senders?", preview)
                 if not answer.lower().startswith("y"):
-                    return self.deny(f"Alex declined archiving these {len(ids)} emails. Leave them in the inbox.")
+                    said = "" if answer.lower() in ("n", "no") else f" They said: {answer}"
+                    return self.deny(f"{self.who} declined archiving these {len(ids)} emails.{said} "
+                                     "Leave them in the inbox unless that says otherwise.")
         return None
 
 
@@ -123,7 +129,7 @@ def verify(tools: MailTools, vips: set[str], reviewer=None, report: dict | None 
     report = report if report is not None else {}
 
     def check() -> str | None:
-        problems = []
+        problems, who = [], tools.box.owner["name"].split()[0]
         user_labels = {"INBOX", "UNREAD"}
         untouched = [m["id"] for m in tools.box.msgs.values()
                      if "INBOX" in m["labelIds"] and not (set(m["labelIds"]) - user_labels)]
@@ -142,8 +148,8 @@ def verify(tools: MailTools, vips: set[str], reviewer=None, report: dict | None 
             missing = [i for i in pending_nr.result() if i in tools.box.msgs] if pending_nr else []
             reviews = {t: f.result() for t, f in pending.items()}
         if missing:  # a second model's opinion: what still expects an answer but has no draft?
-            problems.append(f"These emails expect a reply from Alex but have no draft: {missing}. Draft a reply "
-                            "for each, with [placeholders] for anything only Alex can decide.")
+            problems.append(f"These emails expect a reply from {who} but have no draft: {missing}. Draft a reply "
+                            f"for each, with [placeholders] for anything only {who} can decide.")
         for t, d in drafts:
             leaks = leak_check(tools, d)
             review = reviews.get(t, {})
